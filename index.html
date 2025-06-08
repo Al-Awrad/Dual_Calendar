@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Calendar - Gregorian & Hijri</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom dark mode styles */
+        .dark-gradient {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        }
+        .light-gradient {
+            background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Lucide Icons (simplified)
+        const ChevronLeft = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15,18 9,12 15,6"></polyline>
+            </svg>
+        );
+        
+        const ChevronRight = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9,18 15,12 9,6"></polyline>
+            </svg>
+        );
+        
+        const Calendar = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+        );
+        
+        const Moon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+        );
+        
+        const Star = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"></polygon>
+            </svg>
+        );
+        
+        const Sun = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        );
+
+        const DualCalendarApp = () => {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(new Date());
+            const [darkMode, setDarkMode] = useState(false);
+            
+            // Gregorian calendar state
+            const [gregorianMonth, setGregorianMonth] = useState(new Date().getMonth());
+            const [gregorianYear, setGregorianYear] = useState(new Date().getFullYear());
+            
+            // Hijri calendar state
+            const [hijriMonth, setHijriMonth] = useState(11); // Dhul-Hijjah
+            const [hijriYear, setHijriYear] = useState(1446);
+
+            // Hijri months
+            const hijriMonths = [
+                'Muharram', 'Safar', 'Rabi\' al-Awwal', 'Rabi\' al-Thani',
+                'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Sha\'ban',
+                'Ramadan', 'Shawwal', 'Dhu al-Qi\'dah', 'Dhu al-Hijjah'
+            ];
+
+            const gregorianMonths = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            // Days in each Hijri month (alternating 30/29, but can vary)
+            const hijriDaysInMonth = [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29];
+
+            // More accurate Hijri conversion based on known reference dates
+            const toHijri = (gregorianDate) => {
+                const greg = new Date(gregorianDate);
+                
+                // Reference point: June 8, 2025 = 12 Dhul-Hijjah 1446
+                const referenceGregorian = new Date(2025, 5, 8); // June 8, 2025
+                const referenceHijri = { year: 1446, month: 11, day: 12 }; // 12 Dhul-Hijjah 1446
+                
+                // Calculate difference in days
+                const diffTime = greg.getTime() - referenceGregorian.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                // Start from reference Hijri date
+                let hijriYear = referenceHijri.year;
+                let hijriMonth = referenceHijri.month;
+                let hijriDay = referenceHijri.day + diffDays;
+                
+                // Adjust for month/year overflow or underflow
+                while (hijriDay > hijriDaysInMonth[hijriMonth]) {
+                    hijriDay -= hijriDaysInMonth[hijriMonth];
+                    hijriMonth++;
+                    if (hijriMonth > 11) {
+                        hijriMonth = 0;
+                        hijriYear++;
+                    }
+                }
+                
+                while (hijriDay <= 0) {
+                    hijriMonth--;
+                    if (hijriMonth < 0) {
+                        hijriMonth = 11;
+                        hijriYear--;
+                    }
+                    hijriDay += hijriDaysInMonth[hijriMonth];
+                }
+                
+                return {
+                    year: Math.max(1, hijriYear),
+                    month: Math.max(0, Math.min(11, hijriMonth)),
+                    day: Math.max(1, hijriDay)
+                };
+            };
+
+            // Convert Hijri date to Gregorian
+            const toGregorian = (hijriYear, hijriMonth, hijriDay) => {
+                // Reference point: 12 Dhul-Hijjah 1446 = June 8, 2025
+                const referenceGregorian = new Date(2025, 5, 8);
+                const referenceHijri = { year: 1446, month: 11, day: 12 };
+                
+                // Calculate days difference from reference
+                let daysDiff = 0;
+                
+                // Calculate year difference
+                const yearDiff = hijriYear - referenceHijri.year;
+                daysDiff += yearDiff * 354; // Approximate Hijri year length
+                
+                // Calculate month difference
+                const monthDiff = hijriMonth - referenceHijri.month;
+                daysDiff += monthDiff * 29.5; // Approximate Hijri month length
+                
+                // Calculate day difference
+                daysDiff += hijriDay - referenceHijri.day;
+                
+                // Apply to reference Gregorian date
+                const resultDate = new Date(referenceGregorian);
+                resultDate.setDate(resultDate.getDate() + daysDiff);
+                
+                return resultDate;
+            };
+
+            // Islamic holidays and special days
+            const getIslamicEvents = (hijriDate) => {
+                const events = [];
+                const { month, day } = hijriDate;
+                
+                // Muharram events
+                if (month === 0) {
+                    if (day === 1) events.push('Islamic New Year');
+                    if (day === 10) events.push('Day of Ashura');
+                }
+                
+                // Rabi' al-Awwal events  
+                if (month === 2) {
+                    if (day === 12) events.push('Mawlid al-Nabi (Prophet\'s Birthday)');
+                }
+                
+                // Rajab events
+                if (month === 6) {
+                    if (day === 27) events.push('Isra and Mi\'raj');
+                }
+                
+                // Sha'ban events
+                if (month === 7) {
+                    if (day === 15) events.push('Laylat al-Bara\'at');
+                }
+                
+                // Ramadan events
+                if (month === 8) {
+                    if (day === 1) events.push('Start of Ramadan');
+                    if (day >= 21 && day % 2 === 1) events.push('Laylat al-Qadr (possible)');
+                }
+                
+                // Shawwal events
+                if (month === 9) {
+                    if (day === 1) events.push('Eid al-Fitr');
+                }
+                
+                // Dhu al-Hijjah events
+                if (month === 11) {
+                    if (day === 8) events.push('Start of Hajj');
+                    if (day === 9) events.push('Day of Arafah');
+                    if (day === 10) events.push('Eid al-Adha');
+                    if (day >= 8 && day <= 13) events.push('Hajj Season');
+                    if (day >= 1 && day <= 10) events.push('First Ten Days of Dhul-Hijjah (Blessed Days)');
+                }
+                
+                return events;
+            };
+
+            // Gregorian holidays
+            const getGregorianEvents = (date) => {
+                const events = [];
+                const month = date.getMonth();
+                const day = date.getDate();
+                
+                // Fixed holidays
+                if (month === 0 && day === 1) events.push('New Year\'s Day');
+                if (month === 1 && day === 14) events.push('Valentine\'s Day');
+                if (month === 6 && day === 4) events.push('Independence Day (US)');
+                if (month === 9 && day === 31) events.push('Halloween');
+                if (month === 11 && day === 25) events.push('Christmas Day');
+                
+                return events;
+            };
+
+            // Generate Gregorian calendar days
+            const generateGregorianCalendarDays = () => {
+                const firstDay = new Date(gregorianYear, gregorianMonth, 1);
+                const lastDay = new Date(gregorianYear, gregorianMonth + 1, 0);
+                const startDate = new Date(firstDay);
+                startDate.setDate(startDate.getDate() - firstDay.getDay());
+                
+                const days = [];
+                for (let i = 0; i < 42; i++) {
+                    const date = new Date(startDate);
+                    date.setDate(date.getDate() + i);
+                    days.push(date);
+                }
+                
+                return days;
+            };
+
+            // Generate Hijri calendar days
+            const generateHijriCalendarDays = () => {
+                const daysInCurrentMonth = hijriDaysInMonth[hijriMonth];
+                const days = [];
+                
+                // Calculate what day of week the 1st falls on
+                const firstDayGregorian = toGregorian(hijriYear, hijriMonth, 1);
+                const startDayOfWeek = firstDayGregorian.getDay();
+                
+                // Add empty cells for days before month starts
+                for (let i = 0; i < startDayOfWeek; i++) {
+                    days.push(null);
+                }
+                
+                // Add days of the month
+                for (let day = 1; day <= daysInCurrentMonth; day++) {
+                    days.push({
+                        hijriDay: day,
+                        hijriMonth: hijriMonth,
+                        hijriYear: hijriYear,
+                        gregorianDate: toGregorian(hijriYear, hijriMonth, day)
+                    });
+                }
+                
+                // Fill remaining cells
+                while (days.length < 42) {
+                    days.push(null);
+                }
+                
+                return days;
+            };
+
+            const navigateGregorianMonth = (direction) => {
+                let newMonth = gregorianMonth + direction;
+                let newYear = gregorianYear;
+                
+                if (newMonth > 11) {
+                    newMonth = 0;
+                    newYear++;
+                } else if (newMonth < 0) {
+                    newMonth = 11;
+                    newYear--;
+                }
+                
+                setGregorianMonth(newMonth);
+                setGregorianYear(newYear);
+            };
+
+            const navigateHijriMonth = (direction) => {
+                let newMonth = hijriMonth + direction;
+                let newYear = hijriYear;
+                
+                if (newMonth > 11) {
+                    newMonth = 0;
+                    newYear++;
+                } else if (newMonth < 0) {
+                    newMonth = 11;
+                    newYear--;
+                }
+                
+                setHijriMonth(newMonth);
+                setHijriYear(newYear);
+            };
+
+            const isToday = (date) => {
+                const today = new Date();
+                return date.toDateString() === today.toDateString();
+            };
+
+            const isSelected = (date) => {
+                return date.toDateString() === selectedDate.toDateString();
+            };
+
+            const isCurrentGregorianMonth = (date) => {
+                return date.getMonth() === gregorianMonth;
+            };
+
+            const gregorianCalendarDays = generateGregorianCalendarDays();
+            const hijriCalendarDays = generateHijriCalendarDays();
+            const selectedHijriDate = toHijri(selectedDate);
+            const islamicEvents = getIslamicEvents(selectedHijriDate);
+            const gregorianEvents = getGregorianEvents(selectedDate);
+
+            // Calendar component
+            const CalendarGrid = ({ title, headerLeft, headerRight, days, isHijri = false }) => (
+                React.createElement('div', {
+                    className: `${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-6`
+                }, [
+                    // Calendar Header
+                    React.createElement('div', {
+                        key: 'header',
+                        className: 'flex items-center justify-between mb-6'
+                    }, [
+                        React.createElement('button', {
+                            key: 'left',
+                            onClick: headerLeft,
+                            className: `p-2 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} rounded-full transition-colors`
+                        }, React.createElement(ChevronLeft)),
+                        
+                        React.createElement('h2', {
+                            key: 'title',
+                            className: `text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`
+                        }, title),
+                        
+                        React.createElement('button', {
+                            key: 'right',
+                            onClick: headerRight,
+                            className: `p-2 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} rounded-full transition-colors`
+                        }, React.createElement(ChevronRight))
+                    ]),
+
+                    // Days header
+                    React.createElement('div', {
+                        key: 'days-header',
+                        className: 'grid grid-cols-7 gap-1 mb-4'
+                    }, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => 
+                        React.createElement('div', {
+                            key: day,
+                            className: `text-center text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} py-2`
+                        }, day)
+                    )),
+
+                    // Calendar Grid
+                    React.createElement('div', {
+                        key: 'calendar-grid',
+                        className: 'grid grid-cols-7 gap-1'
+                    }, days.map((item, index) => {
+                        if (isHijri) {
+                            if (!item) {
+                                return React.createElement('div', { key: index, className: 'p-3' });
+                            }
+                            
+                            const { hijriDay, gregorianDate } = item;
+                            const hijriDate = { year: hijriYear, month: hijriMonth, day: hijriDay };
+                            const hasEvents = getIslamicEvents(hijriDate).length > 0;
+                            const isSelectedDay = isSelected(gregorianDate);
+                            const isTodayDay = isToday(gregorianDate);
+                            
+                            return React.createElement('button', {
+                                key: index,
+                                onClick: () => {
+                                    const newSelectedDate = new Date(gregorianDate);
+                                    setSelectedDate(newSelectedDate);
+                                    setGregorianMonth(newSelectedDate.getMonth());
+                                    setGregorianYear(newSelectedDate.getFullYear());
+                                },
+                                className: `relative p-3 text-sm rounded-lg transition-all duration-200 hover:scale-105 ${
+                                    isTodayDay ? `${darkMode ? 'bg-purple-600' : 'bg-purple-500'} text-white font-bold` : ''
+                                } ${
+                                    isSelectedDay && !isTodayDay ? `${darkMode ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-700'} font-semibold` : ''
+                                } ${
+                                    !isTodayDay && !isSelectedDay ? `${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}` : ''
+                                }`
+                            }, [
+                                hijriDay,
+                                hasEvents && React.createElement('div', {
+                                    key: 'indicator',
+                                    className: 'absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full'
+                                })
+                            ]);
+                        } else {
+                            // Gregorian calendar
+                            const hasEvents = getGregorianEvents(item).length > 0 || getIslamicEvents(toHijri(item)).length > 0;
+                            const isSelectedDay = isSelected(item);
+                            const isTodayDay = isToday(item);
+                            const isCurrentMonth = isCurrentGregorianMonth(item);
+                            
+                            return React.createElement('button', {
+                                key: index,
+                                onClick: () => {
+                                    const newSelectedDate = new Date(item);
+                                    setSelectedDate(newSelectedDate);
+                                    const correspondingHijri = toHijri(newSelectedDate);
+                                    setHijriMonth(correspondingHijri.month);
+                                    setHijriYear(correspondingHijri.year);
+                                },
+                                className: `relative p-3 text-sm rounded-lg transition-all duration-200 hover:scale-105 ${
+                                    isTodayDay ? `${darkMode ? 'bg-blue-600' : 'bg-blue-500'} text-white font-bold` : ''
+                                } ${
+                                    isSelectedDay && !isTodayDay ? `${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-700'} font-semibold` : ''
+                                } ${
+                                    !isCurrentMonth ? `${darkMode ? 'text-gray-600' : 'text-gray-300'}` : `${darkMode ? 'text-gray-300' : 'text-gray-700'}`
+                                } ${
+                                    !isTodayDay && !isSelectedDay ? `${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}` : ''
+                                }`
+                            }, [
+                                item.getDate(),
+                                hasEvents && React.createElement('div', {
+                                    key: 'indicator',
+                                    className: 'absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full'
+                                })
+                            ]);
+                        }
+                    }))
+                ])
+            );
+
+            return React.createElement('div', {
+                className: `min-h-screen ${darkMode ? 'dark-gradient' : 'light-gradient'} p-4 transition-all duration-300`
+            }, 
+                React.createElement('div', { className: 'max-w-7xl mx-auto' }, [
+                    // Header
+                    React.createElement('div', {
+                        key: 'header',
+                        className: 'text-center mb-8 relative'
+                    }, [
+                        // Dark Mode Toggle
+                        React.createElement('button', {
+                            key: 'dark-toggle',
+                            onClick: () => setDarkMode(!darkMode),
+                            className: `absolute right-0 top-0 p-3 rounded-full ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' : 'bg-white hover:bg-gray-100 text-gray-700'} shadow-lg transition-all duration-300`
+                        }, darkMode ? React.createElement(Sun) : React.createElement(Moon)),
+                        
+                        React.createElement('h1', {
+                            key: 'title',
+                            className: `text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-2 flex items-center justify-center gap-3`
+                        }, [
+                            React.createElement(Calendar, { key: 'cal-icon' }),
+                            'Dual Calendar',
+                            React.createElement(Moon, { key: 'moon-icon' })
+                        ]),
+                        
+                        React.createElement('p', {
+                            key: 'subtitle',
+                            className: `${darkMode ? 'text-gray-300' : 'text-gray-600'}`
+                        }, 'Gregorian & Hijri Calendar with Special Occasions')
+                    ]),
+
+                    React.createElement('div', {
+                        key: 'content',
+                        className: 'grid xl:grid-cols-3 gap-6'
+                    }, [
+                        // Calendars Section
+                        React.createElement('div', {
+                            key: 'calendars',
+                            className: 'xl:col-span-2 space-y-6'
+                        }, [
+                            // Gregorian Calendar
+                            React.createElement(CalendarGrid, {
+                                key: 'gregorian',
+                                title: `${gregorianMonths[gregorianMonth]} ${gregorianYear}`,
+                                headerLeft: () => navigateGregorianMonth(-1),
+                                headerRight: () => navigateGregorianMonth(1),
+                                days: gregorianCalendarDays,
+                                isHijri: false
+                            }),
+
+                            // Hijri Calendar
+                            React.createElement(CalendarGrid, {
+                                key: 'hijri',
+                                title: `${hijriMonths[hijriMonth]} ${hijriYear} AH`,
+                                headerLeft: () => navigateHijriMonth(-1),
+                                headerRight: () => navigateHijriMonth(1),
+                                days: hijriCalendarDays,
+                                isHijri: true
+                            })
+                        ]),
+
+                        // Daily Details Section
+                        React.createElement('div', {
+                            key: 'details',
+                            className: 'space-y-6'
+                        }, [
+                            // Selected Date
+                            React.createElement('div', {
+                                key: 'selected-date',
+                                className: `${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-6`
+                            }, [
+                                React.createElement('h3',
