@@ -177,43 +177,44 @@
                 
                 // Muharram events
                 if (month === 0) {
-                    if (day === 1) events.push('Islamic New Year');
-                    if (day === 10) events.push('Day of Ashura');
+                    if (day === 1) events.push('Islamic New Year بداية السنة الهجرية');
+                    if (day === 10) events.push('Day of Ashura يوم عاشوراء');
                 }
                 
                 // Rabi' al-Awwal events  
                 if (month === 2) {
-                    if (day === 12) events.push('Mawlid al-Nabi (Prophet\'s Birthday)');
+                    if (day === 12) events.push('Mawlid al-Nabi المولد النبوي الشريف');
                 }
                 
                 // Rajab events
                 if (month === 6) {
-                    if (day === 27) events.push('Isra and Mi\'raj');
+                    if (day === 27) events.push('Isra and Mi\'raj ليلة الإسراء والمعراج');
                 }
                 
                 // Sha'ban events
                 if (month === 7) {
-                    if (day === 15) events.push('Laylat Mountasaf Sha\'ban');
+                    if (day === 15) events.push('Laylat Mountasaf Sha\'ban ليلة منتصف شعبان');
                 }
                 
                 // Ramadan events
                 if (month === 8) {
-                    if (day === 1) events.push('Start of Ramadan');
-                    if (day >= 21 && day % 2 === 1) events.push('Laylat al-Qadr (possible)');
+                    if (day === 1) events.push('Start of Ramadan بداية رمضان');
+                    if (day >= 21 && day % 2 === 1) events.push('Laylat al-Qadr (possible) ليلة القدر (محتمل)');
                 }
                 
                 // Shawwal events
                 if (month === 9) {
-                    if (day === 1) events.push('Eid al-Fitr');
+                    if (day === 1) events.push('Eid al-Fitr عيد الفطر');
                 }
                 
                 // Dhu al-Hijjah events
                 if (month === 11) {
-                    if (day === 8) events.push('Start of Hajj');
-                    if (day === 9) events.push('Day of Arafah');
-                    if (day === 10) events.push('Eid al-Adha');
-                    if (day >= 8 && day <= 13) events.push('Hajj Season');
-                    if (day >= 1 && day <= 10) events.push('First Ten Days of Dhul-Hijjah (Blessed Days)');
+                    if (day === 8) events.push('Start of Hajj بداية الحج');
+                    if (day === 9) events.push('Day of Arafah يوم عرفة');
+                    if (day === 10) events.push('Eid al-Adha عيد الأضحى');
+                    if (day >= 11 && day <= 13) events.push('Days of Tashreeq أيام التشريق');
+                    if (day >= 8 && day <= 13) events.push('Hajj Season موسم الحج');
+                    if (day >= 1 && day <= 10) events.push('First Ten Days of Dhul-Hijjah (Blessed Days) العشر الأوائل من ذي الحجة');
                 }
                 
                 return events;
