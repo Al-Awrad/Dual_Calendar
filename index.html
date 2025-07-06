@@ -77,13 +77,50 @@
             const [selectedDate, setSelectedDate] = useState(new Date());
             const [darkMode, setDarkMode] = useState(false);
             
-            // Gregorian calendar state
-            const [gregorianMonth, setGregorianMonth] = useState(new Date().getMonth());
-            const [gregorianYear, setGregorianYear] = useState(new Date().getFullYear());
+            // Initialize with current date
+            const today = new Date();
+            const todayHijri = (() => {
+                const greg = today;
+                // Reference point: June 8, 2025 = 12 Dhul-Hijjah 1446
+                const referenceGregorian = new Date(2025, 5, 8);
+                const referenceHijri = { year: 1446, month: 11, day: 12 };
+                const diffTime = greg.getTime() - referenceGregorian.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                let hijriYear = referenceHijri.year;
+                let hijriMonth = referenceHijri.month;
+                let hijriDay = referenceHijri.day + diffDays;
+                
+                const hijriDaysInMonth = [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29];
+                
+                while (hijriDay > hijriDaysInMonth[hijriMonth]) {
+                    hijriDay -= hijriDaysInMonth[hijriMonth];
+                    hijriMonth++;
+                    if (hijriMonth > 11) {
+                        hijriMonth = 0;
+                        hijriYear++;
+                    }
+                }
+                
+                while (hijriDay <= 0) {
+                    hijriMonth--;
+                    if (hijriMonth < 0) {
+                        hijriMonth = 11;
+                        hijriYear--;
+                    }
+                    hijriDay += hijriDaysInMonth[hijriMonth];
+                }
+                
+                return { year: hijriYear, month: hijriMonth, day: hijriDay };
+            })();
             
-            // Hijri calendar state
-            const [hijriMonth, setHijriMonth] = useState(11); // Dhul-Hijjah
-            const [hijriYear, setHijriYear] = useState(1446);
+            // Gregorian calendar state - initialize with current date
+            const [gregorianMonth, setGregorianMonth] = useState(today.getMonth());
+            const [gregorianYear, setGregorianYear] = useState(today.getFullYear());
+            
+            // Hijri calendar state - initialize with current Hijri date
+            const [hijriMonth, setHijriMonth] = useState(todayHijri.month);
+            const [hijriYear, setHijriYear] = useState(todayHijri.year);
 
             // Hijri months
             const hijriMonths = [
@@ -177,44 +214,43 @@
                 
                 // Muharram events
                 if (month === 0) {
-                    if (day === 1) events.push('Islamic New Year بداية السنة الهجرية');
-                    if (day === 10) events.push('Day of Ashura يوم عاشوراء');
+                    if (day === 1) events.push('Islamic New Year');
+                    if (day === 10) events.push('Day of Ashura');
                 }
                 
                 // Rabi' al-Awwal events  
                 if (month === 2) {
-                    if (day === 12) events.push('Mawlid al-Nabi المولد النبوي الشريف');
+                    if (day === 12) events.push('Mawlid al-Nabi (Prophet\'s Birthday)');
                 }
                 
                 // Rajab events
                 if (month === 6) {
-                    if (day === 27) events.push('Isra and Mi\'raj ليلة الإسراء والمعراج');
+                    if (day === 27) events.push('Isra and Mi\'raj');
                 }
                 
                 // Sha'ban events
                 if (month === 7) {
-                    if (day === 15) events.push('Laylat Mountasaf Sha\'ban ليلة منتصف شعبان');
+                    if (day === 15) events.push('Laylat al-Bara\'at');
                 }
                 
                 // Ramadan events
                 if (month === 8) {
-                    if (day === 1) events.push('Start of Ramadan بداية رمضان');
-                    if (day >= 21 && day % 2 === 1) events.push('Laylat al-Qadr (possible) ليلة القدر (محتمل)');
+                    if (day === 1) events.push('Start of Ramadan');
+                    if (day >= 21 && day % 2 === 1) events.push('Laylat al-Qadr (possible)');
                 }
                 
                 // Shawwal events
                 if (month === 9) {
-                    if (day === 1) events.push('Eid al-Fitr عيد الفطر');
+                    if (day === 1) events.push('Eid al-Fitr');
                 }
                 
                 // Dhu al-Hijjah events
                 if (month === 11) {
-                    if (day === 8) events.push('Start of Hajj بداية الحج');
-                    if (day === 9) events.push('Day of Arafah يوم عرفة');
-                    if (day === 10) events.push('Eid al-Adha عيد الأضحى');
-                    if (day >= 11 && day <= 13) events.push('Days of Tashreeq أيام التشريق');
-                    if (day >= 8 && day <= 13) events.push('Hajj Season موسم الحج');
-                    if (day >= 1 && day <= 10) events.push('First Ten Days of Dhul-Hijjah (Blessed Days) العشر الأوائل من ذي الحجة');
+                    if (day === 8) events.push('Start of Hajj');
+                    if (day === 9) events.push('Day of Arafah');
+                    if (day === 10) events.push('Eid al-Adha');
+                    if (day >= 8 && day <= 13) events.push('Hajj Season');
+                    if (day >= 1 && day <= 10) events.push('First Ten Days of Dhul-Hijjah (Blessed Days)');
                 }
                 
                 return events;
@@ -228,6 +264,9 @@
                 
                 // Fixed holidays
                 if (month === 0 && day === 1) events.push('New Year\'s Day');
+                if (month === 1 && day === 14) events.push('Valentine\'s Day');
+                if (month === 6 && day === 4) events.push('Independence Day (US)');
+                if (month === 9 && day === 31) events.push('Halloween');
                 if (month === 11 && day === 25) events.push('Christmas Day');
                 
                 return events;
